@@ -1,4 +1,4 @@
-import axios from 'axios';
+const axios = require('axios');
 
 // GoHighLevel API configuration
 const GHL_BASE_URL = 'https://services.leadconnectorhq.com';
@@ -82,7 +82,7 @@ async function createOrUpdateContact(donorData) {
 }
 
 // Main webhook handler
-export default async function handler(req, res) {
+module.exports = async function handler(req, res) {
   // Log all incoming requests for debugging
   console.log('Webhook received:', {
     method: req.method,
