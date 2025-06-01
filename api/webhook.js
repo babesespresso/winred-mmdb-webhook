@@ -83,31 +83,52 @@ async function createOrUpdateContact(donorData) {
 
 // Main webhook handler
 export default async function handler(req, res) {
+  // Log all incoming requests for debugging
+  console.log('Webhook received:', {
+    method: req.method,
+    headers: req.headers,
+    body: req.body,
+    query: req.query
+  });
+
   // Only allow POST requests
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
   try {
-    console.log('Received webhook:', JSON.stringify(req.body, null, 2));
+    console.log('Processing webhook data...');
+    console.log('Raw body:', JSON.stringify(req.body, null, 2));
 
     // Extract donation data from WinRed webhook
     const winredData = req.body;
     
-    // Transform WinRed data to our format
+    // Log all possible field names to understand WinRed's data structure
+    console.log('Available fields:', Object.keys(winredData));
+    
+    // Transform WinRed data to our format - checking multiple possible field names
     const donorData = {
-      firstName: winredData.first_name || winredData.donor_first_name,
-      lastName: winredData.last_name || winredData.donor_last_name,
-      email: winredData.email || winredData.donor_email,
-      phone: winredData.phone || winredData.donor_phone,
-      amount: winredData.amount || winredData.contribution_amount,
-      campaign: winredData.campaign_name || 'Scott Bottoms Campaign',
-      date: winredData.created_at || winredData.transaction_date || new Date().toISOString()
+      firstName: winredData.first_name || winredData.donor_first_name || winredData.firstName || '',
+      lastName: winredData.last_name || winredData.donor_last_name || winredData.lastName || '',
+      email: winredData.email || winredData.donor_email || winredData.donorEmail || '',
+      phone: winredData.phone || winredData.donor_phone || winredData.donorPhone || '',
+      amount: winredData.amount || winredData.contribution_amount || winredData.donationAmount || '0',
+      campaign: winredData.campaign_name || winredData.campaignName || 'Scott Bottoms Campaign',
+      date: winredData.created_at || winredData.transaction_date || winredData.createdAt || new Date().toISOString()
     };
+
+    console.log('Transformed donor data:', donorData);
 
     // Validate required fields
     if (!donorData.email) {
+      console.error('Missing email in webhook data');
       throw new Error('Email is required');
+    }
+
+    // Check if API credentials are set
+    if (!GHL_API_KEY || !GHL_LOCATION_ID) {
+      console.error('Missing GoHighLevel credentials');
+      throw new Error('GoHighLevel API credentials not configured');
     }
 
     // Send to GoHighLevel
@@ -120,16 +141,19 @@ export default async function handler(req, res) {
     res.status(200).json({
       success: true,
       message: 'Donation processed successfully',
-      contactId: contactId
+      contactId: contactId,
+      email: donorData.email
     });
 
   } catch (error) {
-    console.error('Webhook processing error:', error);
+    console.error('Webhook processing error:', error.message);
+    console.error('Full error:', error);
     
     // Return error response
     res.status(500).json({
       success: false,
-      error: error.message
+      error: error.message,
+      details: process.env.NODE_ENV === 'development' ? error.stack : undefined
     });
   }
 }
