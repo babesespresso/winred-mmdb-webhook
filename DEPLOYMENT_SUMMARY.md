@@ -1,4 +1,4 @@
-# WinRed to GoHighLevel Webhook Deployment Summary
+# WinRed to MMDB Webhook Deployment Summary
 
 ## 🎉 Deployment Successful!
 
@@ -15,8 +15,8 @@ Your webhook has been successfully deployed to Vercel. Here are the important de
 
 The following environment variables have been securely added to your Vercel project:
 
-1. **GHL_API_KEY**: Your GoHighLevel API key
-2. **GHL_LOCATION_ID**: Your GoHighLevel Location ID
+1. **GHL_API_KEY**: Your MMDB API key
+2. **GHL_LOCATION_ID**: Your MMDB Location ID
 3. **WINRED_WEBHOOK_SECRET**: Your webhook validation secret
 
 ### Project Structure
@@ -66,7 +66,7 @@ vercel inspect --logs winred-mmdb-webhook-nj84p0jkw-babesespressos-projects.verc
 Your webhook includes the following features:
 
 1. **Automatic Contact Creation/Update**: 
-   - Creates new contacts in GoHighLevel when they don't exist
+   - Creates new contacts in MMDB when they don't exist
    - Updates existing contacts based on email matching
 
 2. **Data Mapping**:
@@ -89,7 +89,7 @@ Your webhook includes the following features:
 If you encounter issues:
 
 1. **Check Environment Variables**: Ensure all environment variables are correctly set in Vercel
-2. **Verify API Credentials**: Make sure your GoHighLevel API key has the necessary permissions
+2. **Verify API Credentials**: Make sure your MMDB API key has the necessary permissions
 3. **Review Logs**: Use `vercel logs` to check for any runtime errors
 4. **Test Locally**: You can test locally using `vercel dev` with your `.env.local` file
 
@@ -112,9 +112,9 @@ To update your webhook code:
 
 For issues with:
 - **Vercel deployment**: Check Vercel documentation or support
-- **GoHighLevel API**: Refer to GoHighLevel API documentation
+- **MMDB API**: Refer to MMDB API documentation
 - **WinRed webhooks**: Contact WinRed support
 
 ---
 
-**Deployment completed on**: December 1, 2024
+**Deployment completed on**: June 1, 2025 @3:00am MST
