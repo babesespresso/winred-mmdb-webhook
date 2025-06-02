@@ -1,19 +1,25 @@
 {
   "name": "winred-ghl-webhook",
   "version": "1.0.0",
-  "main": "index.js",
+  "description": "WinRed to GoHighLevel webhook integration using Inbound Webhook Trigger",
+  "main": "api/webhook.js",
+  "type": "module",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "dev": "vercel dev",
+    "deploy": "vercel --prod"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "description": "",
-  "dependencies": {
-    "axios": "^1.9.0",
-    "dotenv": "^16.5.0"
-  },
+  "dependencies": {},
   "devDependencies": {
-    "@types/node": "^22.15.29"
-  }
+    "@types/node": "^20.0.0"
+  },
+  "keywords": [
+    "webhook",
+    "winred",
+    "gohighlevel",
+    "vercel",
+    "donation",
+    "integration"
+  ],
+  "author": "",
+  "license": "MIT"
 }

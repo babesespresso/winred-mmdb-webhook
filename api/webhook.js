@@ -1,159 +1,83 @@
-const axios = require('axios');
-
-// GoHighLevel API configuration
-const GHL_BASE_URL = 'https://services.leadconnectorhq.com';
-const GHL_API_KEY = process.env.GHL_API_KEY;
-const GHL_LOCATION_ID = process.env.GHL_LOCATION_ID;
-
-// Helper function to create/update contact in GoHighLevel
-async function createOrUpdateContact(donorData) {
-  const contactPayload = {
-    firstName: donorData.firstName || '',
-    lastName: donorData.lastName || '',
-    email: donorData.email || '',
-    phone: donorData.phone || '',
-    source: 'WinRed',
-    customFields: {
-      'donation_amount': donorData.amount?.toString() || '0',
-      'campaign_name': donorData.campaign || 'Scott Bottoms Campaign',
-      'donation_date': donorData.date || new Date().toISOString(),
-      'donor_source': 'WinRed'
-    }
-  };
-
-  try {
-    // First, try to find existing contact by email
-    const searchResponse = await axios.get(
-      `${GHL_BASE_URL}/contacts/search/duplicate`,
-      {
-        headers: {
-          'Authorization': `Bearer ${GHL_API_KEY}`,
-          'Version': '2021-07-28'
-        },
-        params: {
-          locationId: GHL_LOCATION_ID,
-          email: donorData.email
-        }
-      }
-    );
-
-    let contactId;
-    
-    if (searchResponse.data.contact) {
-      // Update existing contact
-      contactId = searchResponse.data.contact.id;
-      await axios.put(
-        `${GHL_BASE_URL}/contacts/${contactId}`,
-        contactPayload,
-        {
-          headers: {
-            'Authorization': `Bearer ${GHL_API_KEY}`,
-            'Version': '2021-07-28',
-            'Content-Type': 'application/json'
-          }
-        }
-      );
-      console.log(`Updated existing contact: ${contactId}`);
-    } else {
-      // Create new contact
-      const createResponse = await axios.post(
-        `${GHL_BASE_URL}/contacts/`,
-        {
-          ...contactPayload,
-          locationId: GHL_LOCATION_ID
-        },
-        {
-          headers: {
-            'Authorization': `Bearer ${GHL_API_KEY}`,
-            'Version': '2021-07-28',
-            'Content-Type': 'application/json'
-          }
-        }
-      );
-      contactId = createResponse.data.contact.id;
-      console.log(`Created new contact: ${contactId}`);
-    }
-
-    return contactId;
-  } catch (error) {
-    console.error('GoHighLevel API Error:', error.response?.data || error.message);
-    throw error;
-  }
-}
-
-// Main webhook handler
-module.exports = async function handler(req, res) {
-  // Log all incoming requests for debugging
-  console.log('Webhook received:', {
-    method: req.method,
-    headers: req.headers,
-    body: req.body,
-    query: req.query
-  });
-
+// Simple webhook forwarder - no API keys needed!
+export default async function handler(req, res) {
   // Only allow POST requests
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
   try {
-    console.log('Processing webhook data...');
-    console.log('Raw body:', JSON.stringify(req.body, null, 2));
+    console.log('Received WinRed webhook:', JSON.stringify(req.body, null, 2));
 
-    // Extract donation data from WinRed webhook
+    // GoHighLevel Inbound Webhook URL
+    const GHL_WEBHOOK_URL = 'https://services.leadconnectorhq.com/hooks/aOaqJlyUINf9VfPvp0hw/webhook-trigger/eqXnc4XunLFIZ1Hdr5PW';
+
+    // Extract and transform WinRed data
     const winredData = req.body;
     
-    // Log all possible field names to understand WinRed's data structure
-    console.log('Available fields:', Object.keys(winredData));
-    
-    // Transform WinRed data to our format - checking multiple possible field names
-    const donorData = {
-      firstName: winredData.first_name || winredData.donor_first_name || winredData.firstName || '',
-      lastName: winredData.last_name || winredData.donor_last_name || winredData.lastName || '',
-      email: winredData.email || winredData.donor_email || winredData.donorEmail || '',
-      phone: winredData.phone || winredData.donor_phone || winredData.donorPhone || '',
-      amount: winredData.amount || winredData.contribution_amount || winredData.donationAmount || '0',
-      campaign: winredData.campaign_name || winredData.campaignName || 'Scott Bottoms Campaign',
-      date: winredData.created_at || winredData.transaction_date || winredData.createdAt || new Date().toISOString()
+    // Transform to clean format for GoHighLevel
+    const transformedData = {
+      // Donor Information
+      firstName: winredData.first_name || winredData.donor_first_name || '',
+      lastName: winredData.last_name || winredData.donor_last_name || '',
+      email: winredData.email || winredData.donor_email || '',
+      phone: winredData.phone || winredData.donor_phone || '',
+      
+      // Donation Details
+      donationAmount: winredData.amount || winredData.contribution_amount || '0',
+      campaignName: winredData.campaign_name || 'Scott Bottoms Campaign',
+      donationDate: winredData.created_at || winredData.transaction_date || new Date().toISOString(),
+      
+      // Source Information
+      source: 'WinRed',
+      platform: 'WinRed Donation',
+      
+      // Transaction Details
+      transactionId: winredData.transaction_id || winredData.id || '',
+      paymentMethod: winredData.payment_method || 'Credit Card',
+      
+      // Address Information (if available)
+      address: winredData.address || '',
+      city: winredData.city || '',
+      state: winredData.state || '',
+      zipCode: winredData.zip_code || winredData.postal_code || '',
+      
+      // Raw data for debugging
+      rawWinRedData: winredData
     };
 
-    console.log('Transformed donor data:', donorData);
+    console.log('Sending transformed data to GoHighLevel:', JSON.stringify(transformedData, null, 2));
 
-    // Validate required fields
-    if (!donorData.email) {
-      console.error('Missing email in webhook data');
-      throw new Error('Email is required');
+    // Forward to GoHighLevel Inbound Webhook
+    const response = await fetch(GHL_WEBHOOK_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(transformedData)
+    });
+
+    if (!response.ok) {
+      throw new Error(`GoHighLevel webhook failed: ${response.status} ${response.statusText}`);
     }
 
-    // Check if API credentials are set
-    if (!GHL_API_KEY || !GHL_LOCATION_ID) {
-      console.error('Missing GoHighLevel credentials');
-      throw new Error('GoHighLevel API credentials not configured');
-    }
+    const ghlResponse = await response.text();
+    console.log('GoHighLevel response:', ghlResponse);
 
-    // Send to GoHighLevel
-    const contactId = await createOrUpdateContact(donorData);
-
-    // Log success
-    console.log(`Successfully processed donation for: ${donorData.email}`);
-
-    // Return success response to WinRed
+    // Return success to WinRed
     res.status(200).json({
       success: true,
-      message: 'Donation processed successfully',
-      contactId: contactId,
-      email: donorData.email
+      message: 'Donation data forwarded to GoHighLevel successfully',
+      timestamp: new Date().toISOString()
     });
 
   } catch (error) {
-    console.error('Webhook processing error:', error.message);
-    console.error('Full error:', error);
+    console.error('Webhook processing error:', error);
     
-    // Return error response
+    // Return error response to WinRed
     res.status(500).json({
       success: false,
       error: error.message,
-      details: process.env.NODE_ENV === 'development' ? error.stack : undefined
+      timestamp: new Date().toISOString()
     });
   }
 }
